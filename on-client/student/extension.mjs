@@ -26,13 +26,29 @@ export function createStudentView() {
       const container = document.createElement('div');
       container.className = 'student-identity-container';
 
-      // 모드 안내 (demo, disconnected, unknown)
-      const currentMode = me?.mode || devices?.mode || sessions?.mode;
-      if (currentMode && MODE_LABELS[currentMode]) {
-        const modeNotice = document.createElement('div');
-        modeNotice.className = `student-mode-badge mode-${currentMode}`;
-        modeNotice.textContent = MODE_LABELS[currentMode];
-        container.appendChild(modeNotice);
+      // 세 자료(me, devices, sessions) 각각의 모드를 확인하여 중복 없이/누락 없이 안내 표시
+      const resources = [
+        { label: '내 정보', res: me },
+        { label: '기기', res: devices },
+        { label: '세션', res: sessions },
+      ];
+
+      const modeBox = document.createElement('div');
+      modeBox.className = 'student-modes';
+
+      const shownModes = new Set();
+      for (const item of resources) {
+        const mode = item.res?.mode;
+        if (mode && MODE_LABELS[mode] && !shownModes.has(`${mode}-${item.label}`)) {
+          shownModes.add(`${mode}-${item.label}`);
+          const badge = document.createElement('span');
+          badge.className = `student-mode-badge mode-${mode}`;
+          badge.textContent = `${item.label}: ${MODE_LABELS[mode]}`;
+          modeBox.appendChild(badge);
+        }
+      }
+      if (modeBox.children.length > 0) {
+        container.appendChild(modeBox);
       }
 
       // 1. loading 상태 처리: me, devices, sessions 중 하나라도 loading이면 안내 표시
@@ -49,15 +65,19 @@ export function createStudentView() {
         const errorBox = document.createElement('div');
         errorBox.className = 'student-status-error';
 
-        const activeError = me?.error || devices?.error || sessions?.error;
-        const errorMsg = activeError?.message ? activeError.message : '확인 불가';
+        const errors = [];
+        if (me?.status === 'error' && me?.error?.message) errors.push(`내 정보: ${me.error.message}`);
+        if (devices?.status === 'error' && devices?.error?.message) errors.push(`기기: ${devices.error.message}`);
+        if (sessions?.status === 'error' && sessions?.error?.message) errors.push(`세션: ${sessions.error.message}`);
+
+        const errorMsg = errors.length > 0 ? errors.join(', ') : (me?.error?.message || devices?.error?.message || sessions?.error?.message || '확인 불가');
         errorBox.textContent = `연결 실패: ${errorMsg}`;
 
         container.appendChild(errorBox);
         return container;
       }
 
-      // 3. ok 상태 처리: me.data 사용자/기기/세션 및 목록 정보 표시
+      // 3. ok 상태 처리: me.data 사용자/기기/세션 정보 표시
       const identityCard = document.createElement('div');
       identityCard.className = 'student-identity-card';
 
@@ -76,34 +96,38 @@ export function createStudentView() {
       userRow.appendChild(userVal);
       identityCard.appendChild(userRow);
 
-      // 현재 기기 정보 및 보안 상태 표시
+      // 현재 기기 정보 및 보안 상태 표시 (한국어 설명 + 원래 status 코드 병기)
       const deviceRow = document.createElement('div');
       deviceRow.className = 'student-row student-device-row';
       const deviceTitle = document.createElement('strong');
       deviceTitle.textContent = '현재 기기: ';
       const deviceVal = document.createElement('span');
-      const devStatusText = DEVICE_STATUS_LABELS[device?.status] || '확인 불가';
-      deviceVal.textContent = `${device?.label || device?.id || '확인 불가'} (${devStatusText})`;
+      const devStatusCode = device?.status || 'unknown';
+      const devStatusText = DEVICE_STATUS_LABELS[devStatusCode] || '확인 불가';
+      // 요구사항: 원래 상태 값(compliant, noncompliant 등)도 함께 textContent로 표시
+      deviceVal.textContent = `${device?.label || device?.id || '확인 불가'} (${devStatusText} · ${devStatusCode})`;
 
       // noncompliant 또는 unknown 은 정상처럼 보이지 않도록 별도 표시
-      if (device?.status !== 'compliant') {
+      if (devStatusCode !== 'compliant') {
         deviceVal.className = 'student-warn-text';
       }
       deviceRow.appendChild(deviceTitle);
       deviceRow.appendChild(deviceVal);
       identityCard.appendChild(deviceRow);
 
-      // 현재 세션 상태 표시
+      // 현재 세션 상태 표시 (한국어 설명 + 원래 status 코드 병기)
       const sessionRow = document.createElement('div');
       sessionRow.className = 'student-row student-session-row';
       const sessionTitle = document.createElement('strong');
       sessionTitle.textContent = '로그인 세션: ';
       const sessionVal = document.createElement('span');
-      const sessStatusText = SESSION_STATUS_LABELS[session?.status] || '확인 불가';
-      sessionVal.textContent = `${session?.id || '확인 불가'} (${sessStatusText})`;
+      const sessStatusCode = session?.status || 'unknown';
+      const sessStatusText = SESSION_STATUS_LABELS[sessStatusCode] || '확인 불가';
+      // 요구사항: 원래 상태 값(active, expired, revoked 등)도 함께 textContent로 표시
+      sessionVal.textContent = `${session?.id || '확인 불가'} (${sessStatusText} · ${sessStatusCode})`;
 
       // active 외의 expired, revoked, unknown 은 정상처럼 보이지 않도록 별도 표시
-      if (session?.status !== 'active') {
+      if (sessStatusCode !== 'active') {
         sessionVal.className = 'student-warn-text';
       }
       sessionRow.appendChild(sessionTitle);
