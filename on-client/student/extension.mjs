@@ -51,16 +51,7 @@ export function createStudentView() {
         container.appendChild(modeBox);
       }
 
-      // 1. loading 상태 처리: me, devices, sessions 중 하나라도 loading이면 안내 표시
-      if (me?.status === 'loading' || devices?.status === 'loading' || sessions?.status === 'loading') {
-        const loadingBox = document.createElement('div');
-        loadingBox.className = 'student-status-loading';
-        loadingBox.textContent = '불러오는 중';
-        container.appendChild(loadingBox);
-        return container;
-      }
-
-      // 2. error 상태 처리: 오류 발생 시 이전 사용자 정보를 완전히 배제하고 오류 메시지만 렌더링
+      // 1. error 상태 처리: 오류가 하나라도 있으면 확인된 실패/오류 메시지를 먼저 렌더링하고 이전 사용자 정보 배제
       if (me?.status === 'error' || devices?.status === 'error' || sessions?.status === 'error') {
         const errorBox = document.createElement('div');
         errorBox.className = 'student-status-error';
@@ -74,6 +65,15 @@ export function createStudentView() {
         errorBox.textContent = `연결 실패: ${errorMsg}`;
 
         container.appendChild(errorBox);
+        return container;
+      }
+
+      // 2. loading 상태 처리: 오류가 없는 상황에서 어느 하나라도 loading이면 안내 표시
+      if (me?.status === 'loading' || devices?.status === 'loading' || sessions?.status === 'loading') {
+        const loadingBox = document.createElement('div');
+        loadingBox.className = 'student-status-loading';
+        loadingBox.textContent = '불러오는 중';
+        container.appendChild(loadingBox);
         return container;
       }
 
